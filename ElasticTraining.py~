@@ -1,0 +1,305 @@
+from elasticsearch import Elasticsearch
+import numpy as np
+import pandas as pd
+import MongoEx
+
+class ElasticTraining:
+    def __init__(self):
+        self.es = Elasticsearch([{'host':'localhost','port':9200}])
+        self.db = MongoEx.MongoEx().db
+        self.ans = self.db['ans2014'].find_one()['topicanswer']
+        self.que = self.db['que2014'].find_one()['topic']
+        self.field = ['title','body','abstract']
+        self.scheme = ['tfidf', 'bm25','ib','lmd','lmj','dfr']
+
+    def training_scheme(self,filename):
+        tokens = filename.split('_')
+        ds = tokens[3]
+        topicnum = int(tokens[4].split('.')[0])
+
+        l = pd.DataFrame(columns=['scheme1','scheme2','scheme3','ds','topic','loss','alpha','beta'])
+
+
+        data = pd.read_csv(open(filename),sep='\t')
+        
+        data['index'] = data.index
+        data = data.rename(columns={'Unnamed: 0' : 'pmcid'})
+        data.drop_duplicates(subset='pmcid',take_last=True,inplace=True)
+
+        for s1 in range(len(self.scheme)):
+            for s2 in range(s1+1,len(self.scheme)):
+                for s3 in range(s2+1,len(self.scheme)):
+                    min_em = float("inf")
+                    remember_alpha = 0
+                    remember_beta = 0
+                    for alpha in np.arange(0,1,0.01):
+                        for beta in np.arange(0,1,0.01):
+
+                            normA = data[self.scheme[s1]]/data[self.scheme[s1]].sum()
+                            normB = data[self.scheme[s2]]/data[self.scheme[s2]].sum()
+                            normC = data[self.scheme[s3]]/data[self.scheme[s3]].sum()
+                            #normA = data[self.scheme[s1]]
+                            #normB = data[self.scheme[s2]]
+                            # row normalization
+                            score= (1-alpha)*(1-beta)*normA + (1-alpha)*beta*normB + alpha*normC
+                            relevancy = data['relevancy']
+
+                            relevancy[relevancy == 1] = 0.75
+                            relevancy[relevancy == 2] = 1
+
+                            em = (relevancy - score) ** 2
+
+                            if em.sum() < min_em:
+                                min_em = em.sum()
+                                remember_alpha = alpha
+                                remember_beta = beta
+                                
+                    l = l.append(pd.DataFrame( 
+                            {
+                                'scheme1' : [self.scheme[s1]], 
+                                'scheme2' : [self.scheme[s2]], 
+                                'scheme3' : [self.scheme[s3]],
+                                'ds' : [ds], 
+                                'topic' : [topicnum], 
+                                'loss'  : [min_em], 
+                                'alpha' : [remember_alpha],
+                                'beta' : [remember_beta]
+                                }
+                            ))
+        return l
+            
+
+    def test(self):
+         # Find the topic we are dealing with
+        for entry in self.que:
+            if entry['number'] == str(1):
+                query = entry
+                break
+
+        content = query['description'].replace(r"/",",")
+        res = self.es.search(index='tfidf',q=content,doc_type="article",analyzer="my_tfidf_analyzer",size=1500)
+
+        print str(res['hits']['hits'][0]['_score'])
+
+    def training_ds(self,filename):
+        tokens = filename.split('_')
+        scheme = tokens[3]
+        num = tokens[4].split('.')[0]
+
+        data = pd.read_csv(open(filename),sep='\t')
+
+        em_min = float("inf")
+        remember_alpha = 0
+        for alpha in np.arange(0,1,0.01):
+            normA = data['description']/data['description'].sum()
+            normB = data['summary']/data['summary'].sum()
+
+            score = alpha*normA + (1-alpha)*normB
+            relevancy = data['relevancy']
+
+            relevancy[relevancy == 1] = 0.5
+            relevancy[relevancy == 2] = 1
+
+            em = (relevancy - score) ** 2
+
+            if em.sum() < em_min:
+                em_min = em.sum()
+                remember_alpha = alpha
+
+
+        return pd.DataFrame(
+            {
+                'scheme' : [scheme],
+                'topic' : [num],
+                'loss' : [em_min],
+                'alpha' : [remember_alpha]
+                })
+
+    def buildVectorWithDS(self,num,scheme):
+        print "Building DS Score Vector...",scheme,":",str(num)
+        filename = "DS_score_vector_" + scheme + "_" + str(num) + ".csv"
+
+        for entry in self.que:
+            if entry['number']== str(num):
+                query = entry
+                break
+
+        pmcList = []
+        relevancyList = []
+
+        for entry in self.ans:
+            if entry['topicnum'] == num:
+                pmcList.append(entry['pmcid'])
+                relevancyList.append(entry['FIELD4'])
+
+        v = pd.DataFrame({'pmcid' : pmcList,'relevancy' : relevancyList})
+
+        analyzer = "my_"+scheme+"_analyzer"
+
+        
+        content1 = query['summary'].replace(r"/",',')
+        res1 = self.es.search(index=scheme + "_garam",q=content1,doc_type="article",analyzer=analyzer,size=10000)
+        content2 = query['description'].replace(r"/",',')
+        res2 = self.es.search(index=scheme + "_garam",q=content2,doc_type="article",analyzer=analyzer,size=10000)
+
+        l1 = []
+        l2 = []
+        for pmcid in pmcList:
+            flag = False
+            for entry in res1['hits']['hits']:
+                if entry['_source']['pmcid'] == pmcid:
+                    flag=True
+                    l1.append(entry['_score'])
+                    break
+            if not flag:
+                l1.append(float(0))
+
+            for entry in res2['hits']['hits']:
+                if entry['_source']['pmcid'] == pmcid:
+                    flag=True
+                    l2.append(entry['_score'])
+                    break
+            if not flag:
+                l2.append(float(0))
+
+        temp1 = pd.DataFrame({ 'summary' : l1})
+        temp2 = pd.DataFrame({ 'description' : l2})
+        v = pd.concat([v,temp1,temp2],axis=1)
+        v.to_csv("vector/"+filename,sep='\t')
+        return v
+                
+                
+        
+    def buildVectorWithScheme(self,num,ds):
+        print "Building Scheme Score Vector...",ds,":",str(num)
+        filename = "scheme_score_vector_" + ds  +"_" +str(num)+".csv"
+
+        v = pd.DataFrame()
+        # Find the topic we are dealing with
+        for entry in self.que:
+            if entry['number'] == str(num):
+                query = entry
+                break
+                    
+        pmcList = []
+        relevancyList = []
+    
+        # pmcid and relevancy collecting
+        for entry in self.ans:
+            pmcList.append(entry['pmcid'])
+            relevancyList.append(entry['FIELD4'])
+
+        content = query[ds].replace(r"/",",")
+
+        for s in self.scheme:
+            print s
+            analyzer = "my_"+s+"_analyzer"
+            res = self.es.search(index=s+"_garam",q=content,doc_type="article",analyzer=analyzer,size=15000,request_timeout=30)
+            l = pd.DataFrame(columns=[s])
+
+            for entry in res['hits']['hits']:
+                pmcid = entry['_source']['pmcid']
+                score = entry['_score']
+                l = l.append(pd.DataFrame({s:[score]},index=[pmcid]))
+            
+            v = pd.concat([v,l],join='inner',axis=1)
+            # merge schemes
+        r = pd.DataFrame({'relevancy' : relevancyList},index=[pmcList])
+        v = v.join(r,how='inner')
+        # v = pd.concat([v,r],join='inner',axis=1)
+        v.to_csv("vector/"+filename,sep='\t')
+        return (v,r)
+            
+    def buildVectorWithField(self,scheme,ds,num):
+        print "Building Field Vector....",scheme,":",num
+        filename = "field_score_vector_" +scheme + "_" + ds + "_" + str(num) +".csv"
+        for entry in self.que:
+            if entry['number'] == str(num):
+                query = entry
+                break
+
+        pmcList = []
+        relevancyList = []
+
+        for entry in self.ans:
+            pmcList.append(entry['pmcid'])
+            relevancyList.append(entry['FIELD4'])
+                
+        content = query[ds].replace(r"/",",")
+        v = pd.DataFrame()
+
+        analyzer = "my_" + scheme + "_analyzer"
+        resTitle = self.es.search(index=scheme+"_garam",q="title:"+content,doc_type="article",analyzer=analyzer,size=15000)
+        resAbstract = self.es.search(index=scheme+"_garam",q="abstract:"+content,doc_type="article",analyzer=analyzer,size=15000)
+        resBody = self.es.search(index=scheme+"_garam",q="body:"+content,doc_type="article",analyzer=analyzer,size=15000)
+
+        titleL = pd.DataFrame(columns=['title'])
+        abstractL = pd.DataFrame(columns=['abstract'])
+        bodyL = pd.DataFrame(columns=['body'])
+
+        for entry in resTitle['hits']['hits']:
+            pmcid = entry['_source']['pmcid']
+            score = entry['_score']
+            titleL = titleL.append(pd.DataFrame({'title':[score]},index=[pmcid]))
+
+        for entry in resAbstract['hits']['hits']:
+            pmcid = entry['_source']['pmcid']
+            score = entry['_score']
+            abstractL = abstractL.append(pd.DataFrame({'abstract':[score]},index=[pmcid]))
+
+        for entry in resBody['hits']['hits']:
+            pmcid = entry['_source']['pmcid']
+            score = entry['_score']
+            bodyL = bodyL.append(pd.DataFrame({'body':[score]},index=[pmcid]))
+
+        v = pd.concat([titleL,abstractL,bodyL],join='inner',axis=1)
+        r = pd.DataFrame({'relevancy' : relevancyList},index=[pmcList])
+        r = r.join(v,how='inner')
+        r.to_csv("vector/"+filename,sep='\t')
+        return r
+        
+            
+    def training_field(self,filename):
+        tokens = filename.split('_')
+        scheme = tokens[3]
+        ds = tokens[4]
+        num = tokens[5].split('.')[0]
+
+        data = pd.read_csv(open(filename),sep='\t')
+        em_min = float("inf")
+        remember_alpha = 0
+        remember_beta = 0
+
+        for alpha in np.arange(0,1,0.01):
+            for beta in np.arange(0,1,0.01):
+                normA = data['title']/data['title'].sum()
+                normB = data['abstract']/data['abstract'].sum()
+                normC = data['body']/data['body'].sum()
+
+                score = (1-alpha)*(1-beta)*normA + (1-alpha)*beta*normB + alpha*normC
+                relevancy = data['relevancy']
+
+                relevancy[relevancy == 1] = 0.5
+                relevancy[relevancy == 2] = 1
+
+                em = (relevancy - score) ** 2
+
+                #print "error :",em.sum(),"alpha :",alpha,",beta:",beta
+
+                if em.sum() < em_min:
+                    em_min = em.sum()
+                    remember_alaph = alpha
+                    remember_beta = beta
+        # print "Scheme <"+scheme+">,loss:",str(em_min)," alpha:",remember_alpha,",beta:",remember_beta,",gamma:",1-remember_alpha-remember_beta
+
+        return pd.DataFrame(
+            {
+                'scheme' : [scheme],
+                'ds' : [ds],
+                'topic' : [num],
+                'loss' : [em_min],
+                'alpha' : [(1-remember_alpha)*(1-remember_beta)],
+                'beta' : [(1-remember_alpha)*remember_beta],
+                'gamma' : [remember_alpha]
+                }
+            )
