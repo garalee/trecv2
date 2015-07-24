@@ -11,8 +11,8 @@ if __name__ == "__main__":
     indexing = ElasticIndexing.ElasticIndexing()
 #    searching = ElasticSearching.ElasticSearching()
 
-    completed = ['ib']
-    scheme = ['tfidf','lmd','lmj','dfr','bm25']
+    completed = ['ib','tfidf']
+    scheme = ['lmd','lmj','dfr','bm25']
     # indexing.doIndex()          
 
     # print "Build DS Vector.."
@@ -35,10 +35,10 @@ if __name__ == "__main__":
     #     for i in range(25,30):
     #         print "Working on",s+"_"+str(i)
     #         training.search_field(i,'summary',s)
-    # for s in ['tfidf','bm25','lmj','dfr']:
-    #     for i in range(7,31):
-    #         print 'working on :',str(i)
-    #         training.search_field(i,'summary',s)
+    for s in scheme:
+        for i in range(1,31):
+            print 'working on :',str(i)
+            training.search_field(i,'summary',s)
         
    
 
