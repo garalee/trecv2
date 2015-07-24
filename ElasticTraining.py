@@ -211,37 +211,36 @@ class ElasticTraining:
         print str(res['hits']['hits'][0]['_score'])
                  
         
-    def buildVectorWithScheme(self,num,ds='summary'):
-        v = pd.DataFrame()
-        # Find the topic we are dealing with
-       
-        pmcList = []
-        relevancyList = []
+    def buildVectorWithScheme(self,num,scheme,ds='summary'):
+        filename = scheme + "_" + ds + "_" + str(num) + ".csv"
+        filename_training = 'scheme_' + scheme + '_' + ds + '_' + str(num) + '_training.csv'
+        filename_eval = 'scheme_' + scheme + '_' + ds + '_' + str(num) + '_eval.csv'
+        print "Working on",filename
+        data = pd.read_csv(open('search_result/' + filename),sep='\t')
+
+        training = pd.DataFrame()
+        evaluation = pd.DataFrame()
+
+        cnt = len(data[(data['relevancy'] == 1) | (data['relevancy'] == 2)])*4/5
+        zero_cnt = cnt
+
+        for index,entry in data.iterrows():
+            if entry['relevancy'] == 0:
+                if zero_cnt == 0:
+                    evaluation = evaluation.append(entry)
+                else:
+                    # training = training.append(entry)
+                    zero_cnt = zero_cnt -1
+            else:
+                if cnt==0:
+                    evaluation = evaluation.append(entry)
+                else:
+                    training = training.append(entry)
+                    cnt = cnt - 1
+
+        training.to_csv('vector/'+filename_training,sep='\t',index=False)
+        evaluation.to_csv('vector/'+filename_eval,sep='\t',index=False)
         
-        # pmcid and relevancy collecting
-        for index,entry in self.ans.iterrows():
-            pmcList.append(entry['pmcid'])
-            relevancyList.append(entry['relevancy'])
-
-        for s in self.scheme:
-            filename = s+ '_' + ds + '_' + str(num) + '.csv'
-            print "Working on",filename
-            data = pd.read_csv(open('search_result/'+filename),sep='\t')
-            l = pd.DataFrame(columns=[s])
-
-            for index,entry in data.iterrows():
-                pmcid = entry['pmcid']
-                score = entry['score']
-                l = l.append(pd.DataFrame({s:[score]},index=[pmcid]))
-            
-            v = pd.concat([v,l],join='inner',axis=1)
-        # merge schemes
-        r = pd.DataFrame({'relevancy' : relevancyList},index=[pmcList])
-        v = v.join(r,how='inner')
-        # v = pd.concat([v,r],join='inner',axis=1)
-        filename = 'scheme_vector_'+ ds + '_' + str(num) + '.csv'
-        v.to_csv("vector/"+filename,sep='\t')
-        return (v,r)
             
     def buildVectorWithField(self,scheme,num,ds='summary'):
         pmcList = []

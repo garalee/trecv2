@@ -7,13 +7,13 @@ import pandas as pd
 
 if __name__ == "__main__":
     
-    #training = ElasticTraining.ElasticTraining()
-    indexing = ElasticIndexing.ElasticIndexing()
-#    searching = ElasticSearching.ElasticSearching()
+    training = ElasticTraining.ElasticTraining()
+    #indexing = ElasticIndexing.ElasticIndexing()
+    # searching = ElasticSearching.ElasticSearching()
 
     
     scheme = ['ib','tfidf','lmd','lmj','dfr','bm25']
-    indexing.doIndex()
+    # indexing.doIndex()
 
     # print "Build DS Vector.."
     # for s in scheme:
@@ -39,10 +39,13 @@ if __name__ == "__main__":
     #     print "Working on","ib_"+str(i)
     #     training.search_field(i,'summary','ib')
 
-    # print "Building Scheme Vector..."
-    # for i in range(1,31):
-    #     training.buildVectorWithScheme(i)
-    # print "Done"
+
+    print "Building Scheme Vector..."
+    training.buildVectorWithScheme(1,'ib')
+    # for s in scheme:
+    #     for i in range(1,31):
+    #         training.buildVectorWithScheme(i,s)
+    print "Done"
     
     # print "Scheme Vector Integration" 
     
