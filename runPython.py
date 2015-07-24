@@ -7,13 +7,13 @@ import pandas as pd
 
 if __name__ == "__main__":
     
-    training = ElasticTraining.ElasticTraining()
-#    indexing = ElasticIndexing.ElasticIndexing()
+    #training = ElasticTraining.ElasticTraining()
+    indexing = ElasticIndexing.ElasticIndexing()
 #    searching = ElasticSearching.ElasticSearching()
 
     
     scheme = ['ib','tfidf','lmd','lmj','dfr','bm25']
-    #indexing.doIndex()
+    indexing.doIndex()
 
     # print "Build DS Vector.."
     # for s in scheme:
@@ -63,8 +63,8 @@ if __name__ == "__main__":
     #         print "Working on :", s + "_" + str(i)
     #         training.buildVectorWithField(s,i)
                 
-    print "Field Training....."
-    for s in ['ib','tfidf','lmd','bm25']:
-        print "working on",s
-        training.training_field(s,'summary')
-    print "Done"
+    # print "Field Training....."
+    # for s in ['ib','tfidf','lmd','bm25']:
+    #     print "working on",s
+    #     training.training_field(s,'summary')
+    # print "Done"

@@ -60,22 +60,35 @@ class ElasticTraining:
 
     def search_scheme(self,scheme,num,ds):
         filename = "search_result/"+ scheme + "_"+ds+"_"+str(num)+".csv"
-        self.ans.sort(['topic','relevancy'],ascending=[1,0])
+        pmcList = []
+        relevancyList = []
 
         for index,entry in self.que.iterrows():
             if entry['topic'] == num:
                 query = entry
                 break
 
+        for index,entry in self.ans.iterrows():
+            if entry['topic'] == num:
+                pmcList.append(entry['pmcid'])
+                relevancyList.append(entry['relevancy'])
+                
+        reTable = pd.DataFrame({"pmcid" : pmcList, "relevancy" : relevancyList})
+
         content = query[ds].replace(r"/",',')
         analyzer = "my_"+scheme+"_analyzer"
-        res = self.es.search(index=scheme +"_garam",q=content,doc_type='article',analyzer=analyzer,size=5000,request_timeout=120)
+
+        res = self.es.search(index=scheme +"_garam",q=content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=120)
+
         l = pd.DataFrame()
         for entry in res['hits']['hits']:
-            pmcid = entry['_source']['pmcid']
-            score = entry['_score']
-            l = l.append(pd.DataFrame({"pmcid" : [pmcid],"score" : [score]}))
+            if entry['_source']['topicnum'] == num:
+                pmcid = entry['_source']['pmcid']
+                score = entry['_score']
+                l = l.append(pd.DataFrame({"pmcid" : [pmcid],"score" : [score]}))
 
+        l = pd.merge(l,reTable,how='inner',on=['pmcid'])
+        l = l.fillna(0)
         l.to_csv(filename,sep='\t',index=False)
 
     def search_field(self,num,ds,scheme):
@@ -265,7 +278,7 @@ class ElasticTraining:
             
     def training_field(self,scheme,ds):
         l = pd.DataFrame()
-        for i in range(1,24):
+        for i in range(1,31):
             print "Topic :",str(i)
             em_min = float("inf")
             remember_alpha = 0

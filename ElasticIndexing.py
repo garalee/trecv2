@@ -80,11 +80,11 @@ class ElasticIndexing:
                      }
             
             ID = str(posts['topicnum']) + '_' + str(pmcid)
-            self.es.index(index="bm25_garam",doc_type="article",id=ID,body=docin)
-            self.es.index(index="dfr_garam",doc_type="article",id=ID,body=docin)
-            self.es.index(index="ib_garam",doc_type="article",id=ID,body=docin)
-            self.es.index(index="lmd_garam",doc_type="article",id=ID,body=docin)
-            self.es.index(index="lmj_garam",doc_type="article",id=ID,body=docin)
-            res = self.es.index(index="tfidf",doc_type="article",id=ID,body=docin)
+            # self.es.index(index="bm25_garam",doc_type="article",id=ID,body=docin)
+            # self.es.index(index="dfr_garam",doc_type="article",id=ID,body=docin)
+            # self.es.index(index="ib_garam",doc_type="article",id=ID,body=docin)
+            # self.es.index(index="lmd_garam",doc_type="article",id=ID,body=docin)
+            # self.es.index(index="lmj_garam",doc_type="article",id=ID,body=docin)
+            res = self.es.index(index="tfidf_garam",doc_type="article",id=ID,body=docin)
             print res['created'],str(i)+"/"+str(cnt)
 
