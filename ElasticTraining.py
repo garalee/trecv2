@@ -154,49 +154,52 @@ class ElasticTraining:
         v=v.fillna(0)
         v.to_csv(filename,sep='\t',index=False)
 
-    def training_scheme(self,filename):
-        tokens = filename.split('_')
-        topicnum = tokens[3].split('.')[0]
-        ds = tokens[2]
-        
+    def training_scheme(self,s1,s2,ds):
         l = pd.DataFrame()
-        data = pd.read_csv(open(filename),sep='\t')
-        data['index'] = data.index
-        data = data.rename(columns={'Unnamed: 0' : 'pmcid'})
-        data.drop_duplicates(subset='pmcid',take_last=True,inplace=True)
-        
-        for s1 in range(len(self.scheme)):
-            for s2 in range(s1+1,len(self.scheme)):
-                min_em = float("inf")
-                remember_alpha = 0
-                for alpha in np.arange(0,1,0.01):
-                    normA = data[self.scheme[s1]]/data[self.scheme[s1]].sum()
-                    normB = data[self.scheme[s2]]/data[self.scheme[s2]].sum()
-                        
-                    score= alpha*normA + (1-alpha)*normB
-                    relevancy = data['relevancy']
+        for i in range(1,31):
+            filename1 = 'scheme_' + s1 + '_' + ds + '_' + str(i) + '_training.csv'
+            filename2 = 'scheme_' + s2 + '_' + ds + '_' + str(i) + '_training.csv'
 
-                    relevancy[relevancy == 1] = 0.75
-                    relevancy[relevancy == 2] = 1
+            data1 = pd.read_csv(open("vector/"+filename1),sep='\t')
+            data2 = pd.read_csv(open("vector/"+filename2),sep='\t')
 
-                    em = (relevancy - score) ** 2
+            data1 = data1.rename(columns={'score':s1})
+            data2 = data2.rename(columns={'score':s2})
 
-                    if em.sum() < min_em:
-                        min_em = em.sum()
-                        remember_alpha = alpha
-                                
-                l = l.append(pd.DataFrame( 
+            m = pd.merge(data1,data2,how='outer',on=['pmcid','relevancy'])
+            m = m.fillna(0)
+            
+            min_em = float("inf")
+            remember_alpha = 0
+
+            for alpha in np.arange(0,1,0.01):
+                normA = m[s1]/m[s1].sum()
+                normB = m[s2]/m[s2].sum()
+                
+                score= alpha*normA + (1-alpha)*normB
+                relevancy = m['relevancy']
+                
+                relevancy[relevancy == 1] = 0.5
+                relevancy[relevancy == 2] = 1
+                
+                em = (relevancy - score) ** 2
+                
+                if em.sum() < min_em:
+                    min_em = em.sum()
+                    remember_alpha = alpha
+                    
+            l = l.append(pd.DataFrame( 
                     {
-                        'scheme1' : [self.scheme[s1]], 
-                        'scheme2' : [self.scheme[s2]], 
+                        'scheme1' : [s1], 
+                        'scheme2' : [s2], 
                         'ds' : [ds], 
-                        'topic' : [topicnum], 
+                        'topic' : [i], 
                         'loss'  : [min_em], 
                         'alpha' : [remember_alpha],
                         'beta' : [1-remember_alpha]
-                    }
-                ))
-        return l            
+                        }
+                    ))
+        l.to_csv('analysis/' + s1+'_'+s2+'_'+ds+'.csv',sep='\t',index=False)
         
     def test(self):
          # Find the topic we are dealing with

@@ -40,34 +40,32 @@ if __name__ == "__main__":
     #     training.search_field(i,'summary','ib')
 
 
-    print "Building Scheme Vector..."
-    training.buildVectorWithScheme(1,'ib')
+    # print "Building Scheme Vector..."
     # for s in scheme:
     #     for i in range(1,31):
+    #         print "working on",s,str(i)
     #         training.buildVectorWithScheme(i,s)
-    print "Done"
+    # print "Done"
     
     # print "Scheme Vector Integration" 
     
    
     # print "Scheme Training..."
-    # l = pd.DataFrame()
-    # for num in range(1,31):
-    #     filename = "vector/scheme_vector_summary_" + str(num) + ".csv"
-    #     print "working on",filename
-    #     l = training.training_scheme(filename)
-    #     l.to_csv("analysis/scheme_" + str(num) +".csv",sep='\t',index=False,columns=['scheme1','scheme2','ds','topic','loss','alpha','beta'])
+    # for s1 in range(len(scheme)):
+    #     for s2 in range(s1+1,len(scheme)):
+    #         print "working on",scheme[s1],'and',scheme[s2]
+    #         training.training_scheme(scheme[s1],scheme[s2],'summary')
     # print "Done"
-
+    
 
     # print "Building Field Vector..."
-    # for s in ['ib','bm25','tfidf','lmd','lmj']:
-    #     for i in range(1,24):
+    # for s in ['dfr']:
+    #     for i in range(1,31):
     #         print "Working on :", s + "_" + str(i)
     #         training.buildVectorWithField(s,i)
                 
-    # print "Field Training....."
-    # for s in ['ib','tfidf','lmd','bm25']:
-    #     print "working on",s
-    #     training.training_field(s,'summary')
-    # print "Done"
+    print "Field Training....."
+    for s in ['ib','tfidf','lmd','bm25','lmj','dfr']:
+        print "working on",s
+        training.training_field(s,'summary')
+    print "Done"
