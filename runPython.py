@@ -2,6 +2,8 @@ import MongoEx
 import ElasticIndexing
 import ElasticSearching
 import ElasticTraining
+import ElasticAnalyzer
+
 import pandas as pd
 
 
@@ -10,7 +12,7 @@ if __name__ == "__main__":
     training = ElasticTraining.ElasticTraining()
     #indexing = ElasticIndexing.ElasticIndexing()
     # searching = ElasticSearching.ElasticSearching()
-
+    analyzer = ElasticAnalyzer.ElasticAnalyzer()
     
     scheme = ['ib','tfidf','lmd','lmj','dfr','bm25']
     # indexing.doIndex()
@@ -64,8 +66,12 @@ if __name__ == "__main__":
     #         print "Working on :", s + "_" + str(i)
     #         training.buildVectorWithField(s,i)
                 
-    print "Field Training....."
-    for s in ['ib','tfidf','lmd','bm25','lmj','dfr']:
-        print "working on",s
-        training.training_field(s,'summary')
-    print "Done"
+    # print "Field Training....."
+    # for s in ['ib','tfidf','lmd','bm25','lmj','dfr']:
+    #     print "working on",s
+    #     training.training_field(s,'summary')
+    # print "Done"
+
+    
+    analyzer.scheme_weight_average()
+    analyzer.field_weight_average()
