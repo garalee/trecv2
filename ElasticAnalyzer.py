@@ -3,7 +3,6 @@ import pandas as pd
 
 class ElasticAnalyzer:
     def __init__(self):
-        self.es = Elasticsearch([{'host':'localhost','port':9200}])
         self.que = pd.read_csv(open('query2014.csv'),sep='\t')
         self.ans_eval = pd.read_csv(open('answer2014.csv'),sep='\t')
         self.scheme = ['bm25','tfidf','ib','lmd','lmj','dfr']
@@ -41,9 +40,27 @@ class ElasticAnalyzer:
     def field_evaluation(self):
         print "Without weighting"
 
-    def scheme_evaluation(self):
-        pass
-    
+    def scheme_evaluation(self,alpha,beta,scheme1,scheme2,num,limits):
+        print "Without weighting"
+        filename1 = 'scheme_' + scheme1 + '_summary_' + str(num) + '_eval.csv'
+        filename2 = 'scheme_' + scheme2 + '_summary_' + str(num) + '_eval.csv'
+
+        data1 = pd.read_csv(open('vector/'+filename1),sep='\t')
+        data1 = data1.rename(columns={'score' : scheme1})
+        data2 = pd.read_csv(open('vector/'+filename2),sep='\t')
+        data2 = data2.rename(columns={'score' : scheme2})
+
+        print "scheme:",scheme1,"precision:",len(data1[(data1[scheme1] > limits)&((data1['relevancy'] == 1)|(data1['relevancy'] == 2))])/float(len(data1))
+        print "scheme:",scheme2,"precision:",len(data2[(data2[scheme2] > limits)&((data2['relevancy'] == 1)|(data2['relevancy'] == 2))])/float(len(data2))
+        
+        print "With weighting"
+        m = pd.merge(data1,data2,how='outer',on=['pmcid','relevancy'])
+
+        m[scheme1] = m[scheme1]*alpha
+        m[scheme2] = m[scheme2]*beta
+        m['result'] = m[scheme1]+m[scheme2]
+
+        print "weighting precision:",len(m[(m['result'] > limits)&((m['relevancy'] == 1) | (m['relevancy'] == 2))])/float(len(m))
 
     def query_field_control(self,scheme,ds,topic,num,weights):
         (alpha,beta,gamma) = weights
@@ -51,7 +68,6 @@ class ElasticAnalyzer:
             if entry['topic'] == topic:
                 query =entry
                 break
-        
         
         content = query[ds].replace(r"/",',')
         token = content.split(' ')

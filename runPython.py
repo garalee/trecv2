@@ -73,5 +73,7 @@ if __name__ == "__main__":
     # print "Done"
 
     
-    analyzer.scheme_weight_average()
-    analyzer.field_weight_average()
+    # analyzer.scheme_weight_average()
+    # analyzer.field_weight_average()
+    
+    analyzer.scheme_evaluation(0.2,0.5,'dfr','lmd',10,0)
