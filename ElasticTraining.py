@@ -154,6 +154,58 @@ class ElasticTraining:
         v=v.fillna(0)
         v.to_csv(filename,sep='\t',index=False)
 
+    def training_scheme3(self,s1,s2,s3,ds):
+        l = pd.DataFrame()
+        for i in range(1,31):
+            print "working on topic",str(i)
+            filename1 = 'scheme_' + s1 + '_' + ds + '_' + str(i) + '_training.csv'
+            filename2 = 'scheme_' + s2 + '_' + ds + '_' + str(i) + '_training.csv'
+            filename3 = 'scheme_' + s3 + '_' + ds + '_' + str(i) + '_training.csv'
+
+            data1 = pd.read_csv(open("vector/"+filename1),sep='\t')
+            data2 = pd.read_csv(open("vector/"+filename2),sep='\t')
+            data3 = pd.read_csv(open("vector/"+filename3),sep='\t')
+
+            data1 = data1.rename(columns={'score':s1})
+            data2 = data2.rename(columns={'score':s2})
+            data3 = data3.rename(columns={'score':s3})
+
+            m = pd.merge(data1,data2,how='outer',on=['pmcid','relevancy'])
+            m = pd.merge(m,data3,how='outer',on=['pmcid','relevancy'])
+            m = m.fillna(0)
+
+            em_min = float('inf')
+            remember_alpha = 0
+            remember_beta = 0
+
+            for alpha in np.arange(0,1,0.01):
+                for beta in np.arange(0,1,0.01):
+                    normA = m[s1]/m[s1].sum()
+                    normB = m[s2]/m[s2].sum()
+                    normC = m[s3]/m[s3].sum()
+
+                    score = (1-alpha)*(1-beta)*normA + (1-alpha)*beta*normB + alpha*normC
+                    relevancy = m['relevancy']
+
+                    em = (relevancy-score) ** 2
+
+                    if em.sum() < em_min:
+                        em_min = em.sum()
+                        remember_alpha = alpha
+                        remember_beta = beta
+            l = l.append(pd.DataFrame({
+                        'scheme1' : [s1],
+                        'scheme2' : [s2],
+                        'scheme3' : [s3],
+                        'topic' : [i],
+                        'loss' : [em_min],
+                        'alpha' : [(1-remember_alpha)*(1-remember_beta)],
+                        'beta' : [(1-remember_alpha)*remember_beta],
+                        'gamma' : [remember_alpha]
+                        }))
+        
+        l.to_csv('analysis/' + 'scheme_' + s1 +'_' +s2 + '_' + s3 + '_' + ds + '.csv',sep='\t',index=False)     
+
     def training_scheme(self,s1,s2,ds):
         l = pd.DataFrame()
         for i in range(1,31):
@@ -178,9 +230,6 @@ class ElasticTraining:
                 
                 score= alpha*normA + (1-alpha)*normB
                 relevancy = m['relevancy']
-                
-                relevancy[relevancy == 1] = 0.5
-                relevancy[relevancy == 2] = 1
                 
                 em = (relevancy - score) ** 2
                 
@@ -220,6 +269,7 @@ class ElasticTraining:
         filename_eval = 'scheme_' + scheme + '_' + ds + '_' + str(num) + '_eval.csv'
         print "Working on",filename
         data = pd.read_csv(open('search_result/' + filename),sep='\t')
+        data_shuffle = data.iloc[np.random.permutation(len(data))]
 
         training = pd.DataFrame()
         evaluation = pd.DataFrame()
@@ -227,7 +277,7 @@ class ElasticTraining:
         cnt = len(data[(data['relevancy'] == 1) | (data['relevancy'] == 2)])*4/5
         zero_cnt = cnt
 
-        for index,entry in data.iterrows():
+        for index,entry in data_shuffle.iterrows():
             if entry['relevancy'] == 0:
                 if zero_cnt == 0:
                     evaluation = evaluation.append(entry)
@@ -246,22 +296,21 @@ class ElasticTraining:
         
             
     def buildVectorWithField(self,scheme,num,ds='summary'):
-        pmcList = []
-        relevancyList = []
-
         filename = "field" + "_" + scheme+"_" + ds + "_"  + str(num) + ".csv"
         filename_training = "field" + "_" + scheme+"_" + ds + "_"  + str(num) + "_training.csv"
         filename_eval = "field" + "_" + scheme+ "_" + ds + "_" + str(num) + "_eval.csv" 
         print "Working on",filename
         data = pd.read_csv(open("search_result/"+filename),sep='\t')
+        data_shuffle = data.iloc[np.random.permutation(len(data))]
 
         training = pd.DataFrame()
         evaluation = pd.DataFrame()
 
         cnt = len(data[(data['relevancy'] == 1) | (data['relevancy'] == 2)])*4/5
         zero_cnt = cnt
+        
 
-        for idx,entry in data.iterrows():
+        for idx,entry in data_shuffle.iterrows():
             if entry['relevancy'] == 0:
                 if zero_cnt == 0:
                     evaluation = evaluation.append(entry)
@@ -276,9 +325,12 @@ class ElasticTraining:
                     cnt = cnt - 1
 
         training.to_csv('vector/'+filename_training,sep='\t',index=False)
-        evaluation.to_csv('vector/'+filename_eval,sep='\t',index=False)        
-            
+        evaluation.to_csv('vector/'+filename_eval,sep='\t',index=False)  
+
+      
+
     def training_field(self,scheme,ds):
+
         l = pd.DataFrame()
         for i in range(1,31):
             print "Topic :",str(i)
@@ -297,9 +349,6 @@ class ElasticTraining:
 
                     score = (1-alpha)*(1-beta)*normA + (1-alpha)*beta*normB + alpha*normC
                     relevancy = data['relevancy']
-
-                    relevancy[relevancy == 1] = 0.5
-                    relevancy[relevancy == 2] = 1
 
                     em = (relevancy - score) ** 2
 
