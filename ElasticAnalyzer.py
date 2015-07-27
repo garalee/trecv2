@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.plotly as py
+
+from plotly.graph_objs import *
 
 
 class ElasticAnalyzer:
@@ -57,43 +60,67 @@ class ElasticAnalyzer:
                     v = v.append(temp)
 
             v.to_csv('analysis/double_scheme_' + target + '.csv',sep='\t',index=False)
-            
 
-    def display_double_scheme(self):
+    def display_double_scheme_heatmap(self):
+        pass
+
+    def display_field_boxplot(self):
         fig,axes = plt.subplots(nrows=2,ncols=3)
+           
+
+        scheme = ['ib','tfidf','bm25','lmd','lmj','dfr']
+
+        for target in scheme:
+            pass
+
+    def display_double_scheme_boxplot(self):
+        fig,axes = plt.subplots(nrows=2,ncols=3)
+
+        for i in range(0,2):
+            for j in range(0,3):
+                axes[i,j].set_ylim(-1,2)
 
         data = pd.read_csv(open('analysis/double_scheme_ib.csv'),sep='\t')
         data = data.ix[:,['topic','alpha']]
+        data = data[data['topic'] < 16]
         data.boxplot(ax=axes[0,0],by='topic',column='alpha')
+        axes[0,0].set_title('IB')
+
 
         data = pd.read_csv(open('analysis/double_scheme_dfr.csv'),sep='\t')
         data = data.ix[:,['topic','alpha']]
+        data = data[data['topic'] < 16]
         data.boxplot(ax=axes[0,1],by='topic',column='alpha')
+        axes[0,1].set_title('DFR')
 
         data = pd.read_csv(open('analysis/double_scheme_lmd.csv'),sep='\t')
         data = data.ix[:,['topic','alpha']]
+        data = data[data['topic'] < 16]
         data.boxplot(ax=axes[0,2],by='topic')
+        axes[0,2].set_title('LMD')
 
         data = pd.read_csv(open('analysis/double_scheme_lmj.csv'),sep='\t')
         data = data.ix[:,['topic','alpha']]
+        data = data[data['topic'] < 16]
         data.boxplot(ax=axes[1,0],by='topic')
+        axes[1,0].set_title('LMJ')
 
         data = pd.read_csv(open('analysis/double_scheme_tfidf.csv'),sep='\t')
         data = data.ix[:,['topic','alpha']]
+        data = data[data['topic'] < 16]
         data.boxplot(ax=axes[1,1],by='topic')
+        axes[1,1].set_title('TFIDF')
 
         data = pd.read_csv(open('analysis/double_scheme_bm25.csv'),sep='\t')
         data = data.ix[:,['topic','alpha']]
+        data = data[data['topic'] < 16]
         data.boxplot(ax=axes[1,2],by='topic')
+        axes[1,2].set_title('BM25')
 
         fig.show()
 
         raw_input()
 
-    
-            
-            
-            
 
 
     def field_weight_average(self):
