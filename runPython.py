@@ -80,4 +80,4 @@ if __name__ == "__main__":
         
     # analyzer.scheme3_evaluation(alpha,beta,gamma,'dfr','bm25','tfidf',20,0)
     # analyzer.build_double_scheme()
-    analyzer.display_double_scheme_boxplot()
+    # analyzer.display_double_scheme_boxplot()

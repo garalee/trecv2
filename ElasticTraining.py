@@ -180,9 +180,9 @@ class ElasticTraining:
 
             for alpha in np.arange(0,1,0.01):
                 for beta in np.arange(0,1,0.01):
-                    normA = m[s1]/m[s1].sum()
-                    normB = m[s2]/m[s2].sum()
-                    normC = m[s3]/m[s3].sum()
+                    normA = m[s1]/float(100)
+                    normB = m[s2]/float(100)
+                    normC = m[s3]/float(100)
 
                     score = (1-alpha)*(1-beta)*normA + (1-alpha)*beta*normB + alpha*normC
                     relevancy = m['relevancy']
@@ -225,8 +225,8 @@ class ElasticTraining:
             remember_alpha = 0
 
             for alpha in np.arange(0,1,0.01):
-                normA = m[s1]/m[s1].sum()
-                normB = m[s2]/m[s2].sum()
+                normA = m[s1]/float(100)
+                normB = m[s2]/float(100)
                 
                 score= alpha*normA + (1-alpha)*normB
                 relevancy = m['relevancy']
