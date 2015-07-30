@@ -68,15 +68,16 @@ if __name__ == "__main__":
     # pocket = analyzer.scheme_weight
     # for i in pocket:
     #     (s1,s2,alpha,beta) = i
-    #     analyzer.scheme_evaluation(alpha,beta,s1,s2,15,0.11)
+    #     analyzer.scheme_evaluation(alpha,beta,s1,s2,20,0.1)
         
-    # for i in analyzer.field_weight:
-    #     s,alpha,beta = i
-    #     analyzer.field_evaluation(alpha,beta,s,20,0.2)
+    for i in analyzer.field_weight:
+        s,alpha,beta = i
+        analyzer.field_evaluation(alpha,beta,s,20,0.1)
 
+    # analyzer.scheme_evaluation_avg('tfidf','dfr',0.1)
 
      # analyzer.scheme_evaluation(0.2,0.5,'dfr','lmd',10,0)
-     # analyzer.field_evaluation(0.727,0.273,'dfr',1,0.01)
+    # analyzer.field_evaluation(0.727,0.273,'dfr',1,0.01)
         
     # analyzer.scheme3_evaluation(alpha,beta,gamma,'dfr','bm25','tfidf',20,0)
     # analyzer.build_double_scheme()

@@ -225,8 +225,8 @@ class ElasticTraining:
             remember_alpha = 0
 
             for alpha in np.arange(0,1,0.01):
-                normA = m[s1]/float(100)
-                normB = m[s2]/float(100)
+                normA = m[s1]
+                normB = m[s2]
                 
                 score= alpha*normA + (1-alpha)*normB
                 relevancy = m['relevancy']
@@ -328,6 +328,8 @@ class ElasticTraining:
         evaluation.to_csv('vector/'+filename_eval,sep='\t',index=False)  
 
       
+    def training_ndcg_field(self,scheme,ds):
+        pass
 
     def training_field(self,scheme,ds):
 
@@ -343,9 +345,9 @@ class ElasticTraining:
             
             for alpha in np.arange(0,1,0.01):
                 for beta in np.arange(0,1,0.01):
-                    normA = data['title']/data['title'].sum()
-                    normB = data['abstract']/data['abstract'].sum()
-                    normC = data['body']/data['body'].sum()
+                    normA = data['title']
+                    normB = data['abstract']
+                    normC = data['body']
 
                     score = (1-alpha)*(1-beta)*normA + (1-alpha)*beta*normB + alpha*normC
                     relevancy = data['relevancy']

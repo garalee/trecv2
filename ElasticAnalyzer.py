@@ -172,13 +172,26 @@ class ElasticAnalyzer:
         comparison = scheme+"_summary_" + str(num) + '.csv'
         data = pd.read_csv(open('vector/'+filename),sep='\t')
         comparison_data = pd.read_csv(open('search_result/'+comparison),sep='\t')
+        ans_num = len(data[(data['relevancy'] == 1) | (data['relevancy'] == 2)])
+
         m =pd.merge(comparison_data,data,how='inner',on=['pmcid','relevancy'])
 
-        print 'scheme:',scheme,'precision:',len(m[(m['score'] > limit)&((m['relevancy'] == 1) | (m['relevancy'] == 2))])/float(len(m))
+        ans = len(m[(m['score'] > limit)&((m['relevancy'] == 1) | (m['relevancy'] == 2))])
+        p = ans/float(len(m))
+        r = ans/float(ans_num)
+        print 'scheme:',scheme,'precision:',p
+        print 'scheme:',scheme,'recall:',r
+        print 'scheem:',scheme,'F-measure:',2*p*r/(p+r)
         
         print "With weighting"
         m['result'] = m['title']*alpha + m['abstract']*beta
-        print 'weighting precision:', len(m[(m['result'] > limit) & ((m['relevancy'] == 1)|(m['relevancy'] == 2))])/float(len(m))
+        ans = len(m[(m['result'] > limit) & ((m['relevancy'] == 1)|(m['relevancy'] == 2))])
+
+        p = ans/float(len(m))
+        r = ans/float(ans_num)
+        print 'weighting precision:', p
+        print 'weighting recall:',r
+        print 'F-measure:',2*p*r/(p+r)
         print '\n'
 
     def scheme3_evaluation(self,alpha,beta,gamma,s1,s2,s3,num,limit):
@@ -204,7 +217,7 @@ class ElasticAnalyzer:
         print "With weighting"
         m = pd.merge(data1,data2,how='outer',on=['pmcid','relevancy'])
         m = pd.merge(m,data3,how='outer',on=['pmcid','relevancy'])
-        m.fillna(0)
+        m = m.fillna(0)
 
         m[s1] = m[s1]*alpha
         m[s2] = m[s2]*beta
@@ -213,30 +226,87 @@ class ElasticAnalyzer:
         print "weighting precision:",len(m[(m['result'] > limit)&((m['relevancy'] == 1) | (m['relevancy'] == 2))])/float(len(m))
         print '\n'
         
+       
+    def scheme_evaluation_avg(self,scheme1,scheme2,limit):        
+        scheme1p_s = 0
+        scheme1r_s = 0
+        scheme2p_s = 0
+        scheme2r_s = 0
+        weightp_s = 0
+        weightr_s = 0
         
+        for i in self.scheme_weight:
+            s1,s2,a,b = i
+            
+            if (s1 == scheme1) and (s2==scheme2):
+                alpha = a
+                beta = b
+                break
+
+
+        for i in range(1,31):
+            (scheme1p,scheme1r,scheme2p,scheme2r,weightp,weightr) = self.scheme_evaluation(alpha,beta,scheme1,scheme2,i,limit)
+            scheme1p_s = scheme1p_s + scheme1p
+            scheme1r_s = scheme1r_s + scheme1r
+            scheme2p_s = scheme2p_s + scheme2p
+            scheme2r_s = scheme2r_s + scheme2r
+            weightp_s = weightp_s + weightp
+            weightr_s = weightr_s + weightr
+
+        print "Scheme1:",scheme1, ", precision:",scheme1p_s/float(30), ",recall:",scheme1r_s/float(30), "F-measure:", 2*scheme1p_s*scheme1r_s/(scheme1p_s + scheme1r_s)/float(30)
+
+        print "Scheme2:",scheme2, ", precision:",scheme2p_s/float(30), ",recall:",scheme2r_s/float(30), "F-measure:", 2*scheme2p_s*scheme2r_s/(scheme2p_s + scheme2r_s)/float(30)
+ 
+        print "weight sum up, precision:",weightp_s/float(30), ",recall:",weightr_s/float(30), "F-measure:", 2*weightp_s*weightr_s/(weightp_s + weightr_s)/float(30)
+            
+
     def scheme_evaluation(self,alpha,beta,scheme1,scheme2,num,limit):
-        print "Scheme Evaluation"
+        print "Scheme Evaluation, topic:",num
         print "Without weighting"
         filename1 = 'scheme_' + scheme1 + '_summary_' + str(num) + '_eval.csv'
         filename2 = 'scheme_' + scheme2 + '_summary_' + str(num) + '_eval.csv'
 
         data1 = pd.read_csv(open('vector/'+filename1),sep='\t')
         data1 = data1.rename(columns={'score' : scheme1})
+        ans1 = len(data1[(data1['relevancy'] == 1) | (data1['relevancy'] == 2)])
         data2 = pd.read_csv(open('vector/'+filename2),sep='\t')
         data2 = data2.rename(columns={'score' : scheme2})
-
-        print "scheme:",scheme1,"precision:",len(data1[(data1[scheme1] > limit)&((data1['relevancy'] == 1)|(data1['relevancy'] == 2))])/float(len(data1))
-        print "scheme:",scheme2,"precision:",len(data2[(data2[scheme2] > limit)&((data2['relevancy'] == 1)|(data2['relevancy'] == 2))])/float(len(data2))
+        ans2 = len(data2[(data2['relevancy'] == 1) | (data2['relevancy'] == 2)])
         
-        print "With weighting"
-        m = pd.merge(data1,data2,how='outer',on=['pmcid','relevancy'])
+        pt = len(data1[(data1[scheme1] > limit)&((data1['relevancy'] == 1)|(data1['relevancy'] == 2))])
+        p = pt/float(len(data1))
+        r = pt/float(ans1)
+        print "scheme:",scheme1,"precision:",p, ",recall:",r,",F-measure:", 2*p*r/(p+r)
+        scheme1p = p
+        scheme1r = r
 
+        pt = len(data2[(data2[scheme2] > limit)&((data2['relevancy'] == 1)|(data2['relevancy'] == 2))])
+        p = pt/float(len(data2))
+        r = pt/float(ans2)
+
+        scheme2p = p
+        scheme2r = r
+        print "scheme:",scheme2,"precision:",p, ",recall:",r,",F-measure:", 2*p*r/(p+r)
+        
+
+        print "With weighting: alpha:",alpha, ",beta:",beta
+        m = pd.merge(data1,data2,how='outer',on=['pmcid','relevancy'])
+        m = m.fillna(0)
         m[scheme1] = m[scheme1]*alpha
         m[scheme2] = m[scheme2]*beta
         m['result'] = m[scheme1]+m[scheme2]
 
-        print "weighting precision:",len(m[(m['result'] > limit)&((m['relevancy'] == 1) | (m['relevancy'] == 2))])/float(len(m))
+        ans = len(m[(m['relevancy'] == 1) | (m['relevancy'] == 2)])
+        pt = len(m[(m['result'] > limit)&((m['relevancy'] == 1) | (m['relevancy'] == 2))])
+        
+        p = pt/float(len(m))
+        r = pt/float(ans)
+        weightp = p
+        weightr = r
+        print "weighting precision:",p,", recall:",r, ", F-measure:",2*p*r/(p+r)
         print '\n'
+
+        return (scheme1p,scheme1r,scheme2p,scheme2r,weightp,weightr)
 
     def query_field_control(self,scheme,ds,topic,num,weights):
         (alpha,beta,gamma) = weights
