@@ -325,7 +325,15 @@ class ElasticTraining:
                     cnt = cnt - 1
 
         training.to_csv('vector/'+filename_training,sep='\t',index=False)
-        evaluation.to_csv('vector/'+filename_eval,sep='\t',index=False)  
+        evaluation.to_csv('vector/'+filename_eval,sep='\t',index=False)
+    def indcg_scheme(self,vector):
+        pass
+
+    def indcg_field(self,vector):
+        vector = vector.sort(['relevancy','title','abstract','body'],ascending=False)
+        result = 0.0
+        for entry in vector.iterrows():
+            entry['relevancy']
 
       
     def training_ndcg_field(self,scheme,ds):
